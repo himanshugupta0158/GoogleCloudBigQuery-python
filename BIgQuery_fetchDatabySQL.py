@@ -1,27 +1,32 @@
+import os
 from google.cloud import bigquery
-from google.oauth2 import service_account
-import json
-import pandas as pd
-from pandas.io import gbq
 
-key_path = "digital-method-373108-d078eec51471.json"
-project_id = "digital-method-373108"
-dataset_id = "himanshu_demo_data"
-table = "test"
-table_id = "{}.{}.{}".format(project_id, dataset_id, table)
-scopes=["https://www.googleapis.com/auth/cloud-platform"]
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'digital-method-373108-d078eec51471.json'
+client = bigquery.Client()
 
-credentials = service_account.Credentials.from_service_account_file(key_path)
 
-def GetCustomData(table_id):
-    query = "SELECT * from "+table_id
-    bigdata=gbq.read_gbq(query,project_id="shipmetrix",credentials=credentials)
-    list_of_jsons = bigdata.to_json(orient='records', lines=True).splitlines()
-    datas=[]
-    for i in list_of_jsons:
-        datas.append(json.loads(i))
-    return datas
+sql = """
+SELECT * FROM digital-method-373108.himanshu_demo_data.test2
+LIMIT 5;
+"""
 
-print(GetCustomData(table_id=table_id))
 
-    
+query = client.query(
+    sql,
+    location='US',
+    job_config=bigquery.QueryJobConfig(maximum_bytes_billed=50_000_000),
+    job_id_prefix="job__high_quality_process"
+)
+
+# print(query)
+# method 1 : to retrive records
+for row in query.result():
+    print("{\nName : ",row.name)
+    print("Gender : ",row.gender)
+    print("Count : ",row.count,"\n}")
+
+
+# method 2 : to retrive records (to dataframe)
+
+df = query.to_dataframe()
+print(df)
